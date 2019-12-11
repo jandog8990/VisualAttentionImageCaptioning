@@ -25,7 +25,7 @@ import pickle
 inceptionv3_weights = '/Users/alejandrogonzales/.keras/models/inception_v3_weights_tf_dim_ordering_tf_kernels_notop.h5'
 
 # Training and annotation paths
-trains = '../cocodataset/val2017'
+trains = '../cocodataset/train2017'
 anns = '../cocodataset/annotations'
 train_path = os.path.abspath(trains)
 ann_path = os.path.abspath(anns)
@@ -68,6 +68,7 @@ for annot in annotations['annotations']:
     all_img_name_vector.append(full_coco_image_path)
     all_captions.append(caption)
 
+    # TODO Remove this when done seeing the system
     print(full_coco_image_path)
     if (count == 10):
         break 
@@ -84,22 +85,24 @@ num_samples = 30000
 train_captions = train_captions[:num_samples]
 img_name_vector = img_name_vector[:num_samples]
 
-# Create CNN (InceptionV3) where the output layer is the last CNN layer for classification
+# Create CNN (InceptionV3) where the output layer is the last CNN layer for 
+# classification
 # Shape of the output layer is 8x8x2048
 # Steps:
 #   1. Use the last CNN layer because we are using attention for our purpose
 #   2. No initialization during training due to bottleneck
-#   3. Forward each image through the network and store resulting vector in dictionary (image_name -> feature_vector)
-#   4. After all images are passed through the network, pickle dictionary and save to disk (uses serialization to save dictionary data)
+#   3. Forward each image through the network and store resulting vector in 
+#       dictionary (image_name -> feature_vector)
+#   4. After all images are passed through the network, pickle dictionary and 
+#       save to disk (uses serialization to save dictionary data)
 
 # Load the model directly from .h5 file
-image_model = tf.keras.applications.InceptionV3(weights=inceptionv3_weights, include_top=False)
+image_model = tf.keras.applications.InceptionV3(weights=inceptionv3_weights, 
+                                                include_top=False)
 print("Image model:")
 print(image_model.summary())
 print("\n")
 
-'''
-#new_model.load_weights('~/.keras/model/*.h5')
 new_input = image_model.input
 hidden_layer = image_model.layers[-1].output
 print("InceptionV3 Architecture:")
@@ -110,7 +113,7 @@ print("\n")
 # Create new model using input and output layers of inception
 image_features_extract_model = tf.keras.Model(new_input, hidden_layer)
 print("Image Extract Model:")
-print(image_features_extract_model)
+print(image_features_extract_model.summary())
 print("\n")
 
 # Cache features extracted from InceptionV3
@@ -123,39 +126,25 @@ encode_train = sorted(set(img_name_vector))
 
 # Create a tensorflow dataset (see Shakespeare)
 image_dataset = tf.data.Dataset.from_tensor_slices(encode_train)
-'''
+image_dataset = image_dataset.map(
+    load_image, num_parallel_calls=tf.data.experimental.AUTOTUNE).batch(
+        BATCH_SIZE)
+print("Image dataset:")
+print(image_dataset)
+print("\n")
 
-# Load weights from external .h5 model using TF
-# Procedure:
-#   1. First build the model with the same architecture as the original (see checkpoint)
-#   2. Use the Model load weights from the .h5 model file
-'''
-new_model = build_model(
-        data_size = data_size,
-        embedding_dim = embedding_dim,
-        rnn_units = rnn_units,
-        batch_size = BATCH_SIZE)
-# test the untrained model (for comparison with weights model)
-new_model.evaluate(x_test, y_test)
-new_model.load_weights('~/.keras/model/*.h5')   # load the weights only
-load_model('~/.keras/model/.h5')    # load mode from h5 file
-new_model.evaluate(x_test, y_test)  # cross-ref w untrained
-'''
-
-# Model fit will save the weights and params from the training (however the fit is done)
-# names of checkpoint files (saves the model and params as the model is trained)
-'''
-checkpoint_dir = './training_checkpoints'
-checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt_{epoch}")
-checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-        filepath=checkpoint_prefix,
-        save_weights_only=True)
-
-EPOCHS=10
-history = model.fit(dataset, epochs=EPOCHS, callbacks=[checkpoint_callback])
-'''
-
-
-
+# Loop through images and feed to our InceptionV3 model to extract features
+for img, path in image_dataset:
+    batch_features = image_features_extract_model(img)
+    print("batch_features_shape = ", batch_features.shape)
+    batch_features = tf.reshape(batch_features,
+                                (batch_features.shape[0], -1, 
+                                 batch_features.shape[3]))
+    
+    for bf, p in zip(batch_features, path):
+        path_of_feature = p.numpy().decode("utf-8")
+        bf_numpy = bf.numpy()
+        print("BF numpy shape = ", bf_numpy.shape)
+        np.save(path_of_feature, bf_numpy)
 
 
