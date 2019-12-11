@@ -21,6 +21,10 @@ from glob import glob
 from PIL import Image
 import pickle
 
+# Custom class files for CNN, RNN, GRU, LSTM
+from CNN_Encoder import CNN_Encoder
+from RNN_Decoder import RNN_Decoder
+
 # InceptionV3 weights for model creation
 inceptionv3_weights = '/Users/alejandrogonzales/.keras/models/inception_v3_weights_tf_dim_ordering_tf_kernels_notop.h5'
 
@@ -261,19 +265,27 @@ dataset = dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
 dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
 # Data set iteration
-for elem in dataset:
-    print(elem)
-    print("\n")
+#for elem in dataset:
+#    print(elem)
+#    print("\n")
 
-# Model - decoder is the same as the machine translation
-# Steps:
-#   1. extract the features from the lower convolutional layer of 
-#       InceptionV3 giving us a vector of shape (8, 8, 2048).
-#   2. You squash that to a shape of (64, 2048).
-#   3. vector is then passed through the CNN Encoder 
-#       (which consists of a single Fully connected layer).
-#   4. RNN (GRU) attends over the image to predict the next word.
+# Create the CNN_Encoder
+encoder = CNN_Encoder(embedding)
+decoder = RNN_Decoder(embedding, units, vocab_size)
 
+# Create the loss functions for cross entropy
+optimizer = tf.keras.optimizers.Adam()
+loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
+        from_logits=True, reduction='none')
+
+def loss_function(real, pred):
+    mask = tf.math.logical_not(tf.math.equal(real, 0))
+    loss_ = loss_object(real, pred)
+    
+    mask = tf.cast(mask, dtype=loss_.dtype)
+    loss_ *= mask
+    
+    return tf.reduce_mean(loss_)
 
 
 
