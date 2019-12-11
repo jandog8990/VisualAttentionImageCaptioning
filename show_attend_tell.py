@@ -59,7 +59,8 @@ print("\n")
 
 # Loop through annotations and create images and captions
 count = 0
-N = 50
+# N = len(annotations['annotations'])
+N = 100
 for annot in annotations['annotations']:
     caption = '<start> ' + annot['caption'] + ' <end>'
     image_id = annot['image_id']
@@ -141,7 +142,7 @@ print("\n")
 # Loop through images and feed to our InceptionV3 model to extract features
 for img, path in image_dataset:
     batch_features = image_features_extract_model(img)
-    print("batch_features_shape = ", batch_features.shape)
+    # print("batch_features_shape = ", batch_features.shape)
     batch_features = tf.reshape(batch_features,
                                 (batch_features.shape[0], -1, 
                                  batch_features.shape[3]))
@@ -149,7 +150,7 @@ for img, path in image_dataset:
     for bf, p in zip(batch_features, path):
         path_of_feature = p.numpy().decode("utf-8")
         bf_numpy = bf.numpy()
-        print("BF numpy shape = ", bf_numpy.shape)
+        # print("BF numpy shape = ", bf_numpy.shape)
         np.save(path_of_feature, bf_numpy)
 
 # Pre-process and tokenize the captions
@@ -202,7 +203,77 @@ max_len = calc_max_length(train_seqs)
 print("Max len = ", max_len)
 print("\n")
 
-# Split data into training and testing
+# Split data into training and testing 70/30 split
+img_name_train, img_name_val, cap_train, cap_val = train_test_split(
+    img_name_vector, cap_vector, test_size=0.3, random_state=0)
+
+len(img_name_train), len(cap_train), len(img_name_val), len(cap_val)
+
+# Create tf dataset for training (batch_size, embedding and rnn units)
+BATCH_SIZE = 64
+BUFFER_SIZE = 1000
+embedding = 256
+units = 512
+vocab_size = len(tokenizer.word_index) + 1
+num_steps = len(img_name_train) // BATCH_SIZE
+
+print("Vocab size = ", vocab_size)
+print("Number of steps = ", num_steps)
+print("\n")
+
+# Shape of the vector extracted from InceptionV3 is (64, 2048)
+features_shape = 2048           # number of output features
+attention_features_shape = 64   # dimensions of each feature
+
+# Load the numpy files
+def map_func(img_name, cap):
+    print("img_name = ", img_name)
+    print("caption = ", cap)
+    print("\n")
+    img_tensor = np.load(img_name.decode('utf-8') + '.npy')
+    return img_tensor, cap
+
+# Slice the images and captions into a new Dataset tensor
+dataset = tf.data.Dataset.from_tensor_slices((img_name_train, cap_train))
+print("Dataset:")
+print(dataset)
+print("\n")
+
+# Use map to load the numpy files in parallel (this merges both the image
+# 2D data as well as the caption vectors into a single Dataset)
+dataset = dataset.map(lambda item1, item2: tf.numpy_function(
+    map_func, [item1, item2], [tf.float32, tf.int32]),
+    num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+# Shuffle and batch the training data for images and captions
+dataset = dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+
+# PREFETCHING:
+# Prefetching overlaps the preprocessing and model execution of a 
+# training step. While the model is executing training step s, 
+# the input pipeline is reading the data for step s+1. 
+
+# Transformation uses a background thread and an internal buffer to 
+# prefetch elements from the input dataset ahead of the time they are 
+# requested. The number of elements to prefetch should be equal to 
+# (or possibly greater than) the number of batches consumed by a 
+# single training step.
+dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+
+# Data set iteration
+for elem in dataset:
+    print(elem)
+    print("\n")
+
+# Model - decoder is the same as the machine translation
+# Steps:
+#   1. extract the features from the lower convolutional layer of 
+#       InceptionV3 giving us a vector of shape (8, 8, 2048).
+#   2. You squash that to a shape of (64, 2048).
+#   3. vector is then passed through the CNN Encoder 
+#       (which consists of a single Fully connected layer).
+#   4. RNN (GRU) attends over the image to predict the next word.
+
 
 
 
