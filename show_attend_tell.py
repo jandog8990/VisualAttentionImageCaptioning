@@ -59,6 +59,7 @@ print("\n")
 
 # Loop through annotations and create images and captions
 count = 0
+N = 50
 for annot in annotations['annotations']:
     caption = '<start> ' + annot['caption'] + ' <end>'
     image_id = annot['image_id']
@@ -69,8 +70,7 @@ for annot in annotations['annotations']:
     all_captions.append(caption)
 
     # TODO Remove this when done seeing the system
-    print(full_coco_image_path)
-    if (count == 10):
+    if (count == N):
         break 
     count = count + 1
 print("\n")
@@ -79,11 +79,16 @@ print("\n")
 train_captions, img_name_vector = shuffle(all_captions,
         all_img_name_vector,
         random_state=1)
+print("train_captions len = ", len(train_captions))
+print("\n")
 
 # Select first 30000 from the shuffled data sets
 num_samples = 30000
 train_captions = train_captions[:num_samples]
 img_name_vector = img_name_vector[:num_samples]
+print("Train captions len = ", len(train_captions))
+print("Img name len = ", len(img_name_vector))
+print("\n")
 
 # Create CNN (InceptionV3) where the output layer is the last CNN layer for 
 # classification
@@ -146,5 +151,58 @@ for img, path in image_dataset:
         bf_numpy = bf.numpy()
         print("BF numpy shape = ", bf_numpy.shape)
         np.save(path_of_feature, bf_numpy)
+
+# Pre-process and tokenize the captions
+# Steps:
+#   1. Tokenize captions (splitting spaces) -> unique word vocab
+#   2. Limit vocab to top 5000 words to save memory. Replace all other
+#       tokens with "UNK" for unknown
+#   3. Create word-to-index and index-to-word mappings
+#   4. Pad all sequences to be same length as the longest one
+# Find max length of any caption in the dataset
+def calc_max_length(tensor):
+    return max(len(t) for t in tensor)
+
+# Choose top 5000 words from vocab (i.e. words per image frame)
+top_k = 5000
+tokenizer = tf.keras.preprocessing.text.Tokenizer(num_words=top_k,
+                                                  oov_token='<unk>',
+                                                  filters='!"#$%&()*+.,-/:;=?@[\]^_`{|}~ ')
+tokenizer.fit_on_texts(train_captions)
+train_seqs = tokenizer.texts_to_sequences(train_captions)
+print("Training Sequences (captions):")
+print(len(train_seqs))
+print(len(train_seqs[0]))
+print(train_seqs)
+print("\n")
+
+# word to index and vice versa
+tokenizer.word_index['<pad>'] = 0
+tokenizer.index_word[0] = '<pad>'
+
+# Create the tokenized vectors
+train_seqs = tokenizer.texts_to_sequences(train_captions)
+print("Training Sequences (captions):")
+print(len(train_seqs))
+print(len(train_seqs[0]))
+print(train_seqs)
+print("\n")
+
+# Pad each vector to the max length of the captions
+# If max_length not provided, pad_sequences calculates it automatically
+cap_vector = tf.keras.preprocessing.sequence.pad_sequences(
+    train_seqs, padding='post')
+print("Caption vector:")
+print(cap_vector.shape)
+print(cap_vector)
+print("\n")
+
+# Max length to store the attention weights
+max_len = calc_max_length(train_seqs)
+print("Max len = ", max_len)
+print("\n")
+
+# Split data into training and testing
+
 
 
