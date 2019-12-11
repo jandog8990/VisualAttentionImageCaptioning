@@ -287,5 +287,14 @@ def loss_function(real, pred):
     
     return tf.reduce_mean(loss_)
 
+# Checkpoint for saving weights to the directory
+checkpoint_path = "./checkpoints/train"
+ckpt = tf.train.Checkpoint(encoder=encoder,
+                           decoder=decoder,
+                           optimizer=optimizer)
+ckpt_manager = tf.train.CheckpointManager(ckpt, checkpoint_path, max_to_keep=5)
 
+start_epoch = 0
+if ckpt_manager.latest_checkpoint:
+    start_epoch = int(ckpt_manager.latest_checkpoint.split('-')[-1])
 
