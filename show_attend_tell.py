@@ -12,14 +12,14 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 
-import re
+#import re
 import numpy as np
 import os
 import time
 import json
 from glob import glob
 from PIL import Image
-import pickle
+#import pickle
 
 # Custom class files for CNN, RNN, GRU, LSTM
 from CNN_Encoder import CNN_Encoder
@@ -90,8 +90,8 @@ train_captions, img_name_vector = shuffle(all_captions,
 #num_samples = 30000
 #num_samples = 10240
 #num_samples = 4096
-#num_samples = 1024
-num_samples = 256
+#num_samples = 2048
+num_samples = 8
 train_captions = train_captions[:num_samples]
 img_name_vector = img_name_vector[:num_samples]
 print("train_captions len = ", len(train_captions))
@@ -427,7 +427,7 @@ def plot_attention(image, result, attention_plot):
         for l in range(len_result):
             temp_att = np.resize(attention_plot[l], (8, 8))
             print("l + 1 = ", (l+1))
-            if (l+1 > total_dim):
+            if ((l+1) > total_dim):
                 print("THIS WILL PASS AN ERROR!")
             else:
                 print("THIS WILL NOT PASS ERROR:")
@@ -452,17 +452,21 @@ image = img_name_val[rid]
 real_caption = ' '.join([tokenizer.index_word[i] for i in cap_val[rid] if i not in [0]])
 result, attention_plot = evaluate(image)
 
+print("-------------------------------------------------------")
 print("Final result:")
 print("len result = ", len(result))
 print(result)
 print("\n")
 
-print ('Real Caption:', real_caption)
-print ('Prediction Caption:', ' '.join(result))
+print ('Real Caption:       ', real_caption)
+print ('Prediction Caption: ', ' '.join(result))
 print ("image = ", image)
 print("\n")
 plot_attention(image, result, attention_plot)
+print("-------------------------------------------------------")
 print("\n")
+print("\n")
+
 
 # Try your own images (Surf and turf)
 image_url = 'https://tensorflow.org/images/surf.jpg'
@@ -474,5 +478,10 @@ print("Test Image:")
 result, attention_plot = evaluate(image_path)
 print ('Test Prediction Caption:', ' '.join(result))
 plot_attention(image_path, result, attention_plot)
+print("-------------------------------------------------------")
+
+print("\n")
+print("\n")
+
 # opening the image
 #Image.open(image_path)
