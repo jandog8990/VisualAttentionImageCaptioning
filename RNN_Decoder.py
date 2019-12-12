@@ -13,11 +13,20 @@ import tensorflow as tf
 from NeuralAttention import NeuralAttention
 
 class RNN_Decoder(tf.keras.Model):
-    def __init__(self, embedding_dim, units, vocab_size):
+    def __init__(self, embedding_dim, units, vocab_size, batch_size):
         super(RNN_Decoder, self).__init__()
         self.units = units
         
-        self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
+        # input layer: trainable lookup table that maps the numbers of
+        # each word to a vector with embedding_dim dimensions
+        self.embedding = tf.keras.layers.Embedding(vocab_size, 
+                                                   embedding_dim,
+                                                   mask_zero=True,
+                                                   batch_input_shape=[
+                                                           batch_size, None])
+#                                                   trainable=True)
+    
+        # GRU can have multiple models for better decoding/prediction of text
         self.gru = tf.keras.layers.GRU(self.units,
                                        return_sequences=True,
                                        return_state=True,
@@ -40,7 +49,12 @@ class RNN_Decoder(tf.keras.Model):
         # (batch_size, 1, embedding_dim + hidden_size)
         x = tf.concat([tf.expand_dims(context_vector, 1), x], axis=-1)
         
-        # pass the concatenated vector to the GRU
+        # pass the concatenated vector to the GRU with the procedure:
+        # 1. For each word the model looks up embedding
+        # 2. Runs GRU one timestep with embedding as input
+        # 3. Applies dense layer to generate logits predicting
+        #   the log-likelihood of the next word
+        
         output, state = self.gru(x)
         
         # shape == (batch_size, max_length, hidden_size)
