@@ -12,9 +12,9 @@ the captions for the particular image
 import tensorflow as tf
 from NeuralAttention import NeuralAttention
 
-class RNN_Decoder(tf.keras.Model):
+class GRU_Decoder(tf.keras.Model):
     def __init__(self, embedding_dim, units, vocab_size, batch_size):
-        super(RNN_Decoder, self).__init__()
+        super(GRU_Decoder, self).__init__()
         self.units = units
         
         # input layer: trainable lookup table that maps the numbers of
@@ -37,6 +37,9 @@ class RNN_Decoder(tf.keras.Model):
         
         self.attention = NeuralAttention(self.units)
         
+    # Execute the decoder with the input captions x, the encoded features
+    # provided from CNN-encoder, and finally the hidden state which retains 
+    # past information of previous words (i.e. GRU/LSTM memory architecture)
     def call(self, x, features, hidden):
         # defining attention as separate neural model
         context_vector, attention_weights = self.attention(features, hidden)
@@ -54,7 +57,7 @@ class RNN_Decoder(tf.keras.Model):
         # 2. Runs GRU one timestep with embedding as input
         # 3. Applies dense layer to generate logits predicting
         #   the log-likelihood of the next word
-        
+        # 4. GRU output - 
         output, state = self.gru(x)
         
         # shape == (batch_size, max_length, hidden_size)

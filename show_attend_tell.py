@@ -23,7 +23,7 @@ from PIL import Image
 
 # Custom class files for CNN, RNN, GRU, LSTM
 from CNN_Encoder import CNN_Encoder
-from RNN_Decoder import RNN_Decoder
+from GRU_Decoder import GRU_Decoder 
 
 # InceptionV3 weights for model creation
 inceptionv3_weights = '/Users/alejandrogonzales/.keras/models/inception_v3_weights_tf_dim_ordering_tf_kernels_notop.h5'
@@ -88,10 +88,10 @@ train_captions, img_name_vector = shuffle(all_captions,
 
 # Select first 30000 from the shuffled data sets
 #num_samples = 30000
-#num_samples = 10240
+num_samples = 10240
 #num_samples = 4096
 #num_samples = 2048
-num_samples = 8
+#num_samples = 8
 train_captions = train_captions[:num_samples]
 img_name_vector = img_name_vector[:num_samples]
 print("train_captions len = ", len(train_captions))
@@ -131,7 +131,7 @@ print("\n")
 #   1. Caching output in RAM is too much (requires 8*8*2048 floats per image)
 #   2. Cache using the checkpoint callback used in Shakespeare learning
 # Get unique images
-BATCH_SIZE = 16
+BATCH_SIZE = 64
 encode_train = sorted(set(img_name_vector))
 
 # Create a tensorflow dataset (see Shakespeare)
@@ -213,7 +213,7 @@ max_len, len(img_name_train), len(cap_train), len(img_name_val), len(cap_val)
 
 # Create tf dataset for training (batch_size, embedding and rnn units)
 #BATCH_SIZE = 64    # needed for GPU cores to pass multiple instances
-BATCH_SIZE = 8
+BATCH_SIZE = 64
 BUFFER_SIZE = 1024
 embedding = 256
 units = 512
@@ -264,7 +264,7 @@ dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
 # Create the CNN_Encoderddaaa
 encoder = CNN_Encoder(embedding)
-decoder = RNN_Decoder(embedding, units, vocab_size, BATCH_SIZE)
+decoder = GRU_Decoder(embedding, units, vocab_size, BATCH_SIZE)
 
 # Create the loss functions for cross entropy
 optimizer = tf.keras.optimizers.Adam()

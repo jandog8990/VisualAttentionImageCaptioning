@@ -25,6 +25,10 @@ class NeuralAttention(tf.keras.Model):
         self.W2 = tf.keras.layers.Dense(units)
         self.V = tf.keras.layers.Dense(1)
     
+    # Args:
+    #   1. Encoded image features to be classified
+    #   2. The hidden state calculated in the previous iteration
+    #       for captions and previous attention areas
     def call(self, features, hidden):
         # features(CNN_encoder output) shape == (batch_size, 64, embedding_dim)
         
